@@ -10,7 +10,6 @@ import logging
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-import time
 import re
 
 # Configure logging
@@ -30,9 +29,6 @@ class StatMuseAPI:
             'Accept-Language': 'en-US,en;q=0.5',
             'Connection': 'keep-alive',
         }
-        # Simple in-memory cache
-        self.cache = {}
-        self.cache_ttl = 300  # 5 minutes
     
     def clean_statmuse_text(self, text: str) -> str:
         """Clean up StatMuse text to fix spacing and grammar issues"""
@@ -324,27 +320,13 @@ class StatMuseAPI:
         return insights
     
     def query_statmuse(self, query: str) -> dict:
-        """Query StatMuse with caching"""
-        cache_key = query.lower()
-        current_time = time.time()
-        
-        # Check cache
-        if cache_key in self.cache:
-            cached_data, timestamp = self.cache[cache_key]
-            if current_time - timestamp < self.cache_ttl:
-                logger.info(f"💾 Cache hit for: {query}")
-                cached_data['cached'] = True
-                return cached_data
-        
-        # Execute the query using standard approach
-        result = self._try_standard_query(query, current_time, cache_key)
-        return result
+        """Query StatMuse directly - no caching for fresh data"""
+        logger.info(f"🔍 StatMuse Query: {query}")
+        return self._execute_query(query)
     
-    def _try_standard_query(self, query: str, current_time: float, cache_key: str) -> dict:
+    def _execute_query(self, query: str) -> dict:
         """Try the standard StatMuse query approach"""
         try:
-            logger.info(f"🔍 StatMuse Query: {query}")
-            
             # Format query for URL to match working StatMuse format
             # Examples: "A'ja Wilson points this season" -> "aja-wilson-points-this-season"
             #          "Caitlin Clark stats last 5 games" -> "caitlin-clark-stats-last-5-games"
@@ -393,20 +375,18 @@ class StatMuseAPI:
                         'query': query,
                         'answer': answer_text,
                         'url': url,
-                        'cached': False,
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': datetime.now().isoformat(),
+                        'source': 'StatMuse'
                     }
-                    
-                    # Cache the result
-                    self.cache[cache_key] = (result.copy(), current_time)
-                    
+                            
                     return result
                 else:
                     logger.warning(f"No answer found for: {query}")
                     return {
                         'success': False,
                         'error': 'No answer found',
-                        'query': query
+                        'query': query,
+                        'source': 'StatMuse'
                     }
             else:
                 logger.warning(f"StatMuse query failed: {response.status_code}")
