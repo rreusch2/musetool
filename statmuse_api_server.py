@@ -32,7 +32,7 @@ class StatMuseAPI:
         }
         # Simple in-memory cache
         self.cache = {}
-        self.cache_ttl = 3600  # 1 hour
+        self.cache_ttl = 300  # 5 minutes
     
     def clean_statmuse_text(self, text: str) -> str:
         """Clean up StatMuse text to fix spacing and grammar issues"""
